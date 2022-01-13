@@ -55,7 +55,7 @@ class JobRemoteRunner():
         self.location = location
         self.gcp_resources = gcp_resources
         self.client_options = {
-            'api_endpoint': location + '-aiplatform.googleapis.com'
+            'api_endpoint': location + '-autopush-aiplatform.sandbox.googleapis.com'
         }
         self.client_info = gapic_v1.client_info.ClientInfo(
             user_agent='google-cloud-pipeline-components')
@@ -97,7 +97,7 @@ class JobRemoteRunner():
     def create_job(self, create_job_fn, payload) -> str:
         """Create a job."""
         parent = f'projects/{self.project}/locations/{self.location}'
-        # TODO(kevinbnaughton) remove empty fields from the spec temporarily.
+
         job_spec = json_util.recursive_remove_empty(json.loads(payload, strict=False))
         create_job_response = create_job_fn(self.job_client, parent, job_spec)
         job_name = create_job_response.name

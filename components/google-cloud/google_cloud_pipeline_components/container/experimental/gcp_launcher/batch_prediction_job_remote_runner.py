@@ -16,12 +16,19 @@
 from . import job_remote_runner
 from .utils import artifact_util, json_util
 import json
+from google.cloud.aiplatform.gapic import ExplanationMetadata
 from google_cloud_pipeline_components.types.artifact_types import VertexBatchPredictionJob
 
 UNMANAGED_CONTAINER_MODEL_ARTIFACT_NAME = 'unmanaged_container_model'
 
 
 def create_batch_prediction_job_with_client(job_client, parent, job_spec):
+  # If the job_spec contains explanation metadata, convert to
+  # ExplanationMetadata for the job client to recognize.
+  if job_spec['explanation_spec'] and job_spec['explanation_spec']['metadata']:
+    job_spec['explanation_spec']['metadata'] = ExplanationMetadata.from_json(
+        json.dumps(job_spec['explanation_spec']['metadata']))
+
   return job_client.create_batch_prediction_job(
       parent=parent, batch_prediction_job=job_spec)
 
@@ -71,6 +78,7 @@ def create_batch_prediction_job(
   Also retry on ConnectionError up to
   job_remote_runner._CONNECTION_ERROR_RETRY_LIMIT times during the poll.
   """
+
   remote_runner = job_remote_runner.JobRemoteRunner(type, project, location,
                                                     gcp_resources)
 
@@ -78,8 +86,9 @@ def create_batch_prediction_job(
   job_name = remote_runner.check_if_job_exists()
   if job_name is None:
     job_name = remote_runner.create_job(
-        create_batch_prediction_job_with_client,
-        insert_artifact_into_payload(executor_input, payload))
+        create_job_fn=create_batch_prediction_job_with_client,
+        payload=insert_artifact_into_payload(
+            executor_input=executor_input, payload=payload))
 
   # Poll batch prediction job status until "JobState.JOB_STATE_SUCCEEDED"
   get_job_response = remote_runner.poll_job(
