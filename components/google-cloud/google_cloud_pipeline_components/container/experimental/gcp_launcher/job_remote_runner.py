@@ -150,3 +150,9 @@ class JobRemoteRunner():
                     ' Waiting for %s seconds for next poll.', job_name,
                     get_job_response.state, _POLLING_INTERVAL_IN_SECONDS)
                 time.sleep(_POLLING_INTERVAL_IN_SECONDS)
+
+    def cancel_job(self, cancel_job_fn):
+        job_name = self.check_if_job_exists()
+        if job_name:
+            cancel_job_fn(self.job_client, job_name)
+

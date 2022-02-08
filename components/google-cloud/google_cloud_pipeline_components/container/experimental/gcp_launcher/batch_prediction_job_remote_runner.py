@@ -16,6 +16,7 @@
 from . import job_remote_runner
 from .utils import artifact_util, json_util
 import json
+import logging
 from google_cloud_pipeline_components.types.artifact_types import VertexBatchPredictionJob
 
 UNMANAGED_CONTAINER_MODEL_ARTIFACT_NAME = 'unmanaged_container_model'
@@ -42,6 +43,11 @@ def insert_artifact_into_payload(executor_input, payload):
     job_spec[UNMANAGED_CONTAINER_MODEL_ARTIFACT_NAME][
         'artifact_uri'] = artifact[0].get('uri')
   return json.dumps(job_spec)
+
+
+def _on_cancel(job_client, job_name):
+  logging.info('Cancelling batch prediction job')
+  job_client.cancel_batch_prediction_job(name=job_name)
 
 
 def create_batch_prediction_job(
@@ -92,4 +98,7 @@ def create_batch_prediction_job(
       get_job_response.output_info.bigquery_output_dataset,
       get_job_response.output_info.gcs_output_directory)
   artifact_util.update_gcp_output_artifact(executor_input,
-                                       vertex_batch_predict_job_artifact)
+                                           vertex_batch_predict_job_artifact)
+
+  def on_cancel():
+    remote_runner.cancel_job(_on_cancel)

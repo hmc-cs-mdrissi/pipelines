@@ -26,6 +26,7 @@ from . import delete_endpoint_remote_runner
 from . import deploy_model_remote_runner
 from . import export_model_remote_runner
 from . import hyperparameter_tuning_job_remote_runner
+from ... import launcher_context
 from . import undeploy_model_remote_runner
 from . import upload_model_remote_runner
 from . import wait_gcp_resources
@@ -181,7 +182,7 @@ def _parse_args(args):
 def main(argv):
   """Main entry.
 
-  Eexpected input args are as follows:
+  Expected input args are as follows:
     Project - Required. The project of which the resource will be launched.
     Region - Required. The region of which the resource will be launched.
     Type - Required. GCP launcher is a single container. This Enum will
@@ -201,7 +202,11 @@ def main(argv):
 
   logging.info('Job started for type: ' + job_type)
 
-  _JOB_TYPE_TO_ACTION_MAP[job_type](**parsed_args)
+  on_cancel_handler = None
+  if hasattr(_JOB_TYPE_TO_ACTION_MAP[job_type].__module__, 'on_cancel'):
+    on_cancel_handler = _JOB_TYPE_TO_ACTION_MAP[job_type].on_cancel
+  with launcher_context.KfpExecutionContext(on_cancel=on_cancel_handler):
+    _JOB_TYPE_TO_ACTION_MAP[job_type](**parsed_args)
 
 
 if __name__ == '__main__':
